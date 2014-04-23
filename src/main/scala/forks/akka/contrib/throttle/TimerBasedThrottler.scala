@@ -10,11 +10,18 @@ package forks.akka.contrib.throttle
 import scala.concurrent.duration.{ Duration, FiniteDuration }
 import scala.util.control.NonFatal
 import scala.collection.immutable.{ Queue ⇒ Q }
-import akka.actor.{ ActorRef, Actor, FSM }
+import akka.actor._
 import Throttler._
 import TimerBasedThrottler._
 import java.util.concurrent.TimeUnit
 import akka.AkkaException
+import forks.akka.contrib.throttle.TimerBasedThrottler.Message
+import forks.akka.contrib.throttle.TimerBasedThrottler.Data
+import scala.Some
+import forks.akka.contrib.throttle.Throttler.QueueFull
+import forks.akka.contrib.throttle.Throttler.SetTarget
+import forks.akka.contrib.throttle.Throttler.Rate
+import forks.akka.contrib.throttle.Throttler.SetRate
 
 /**
  * @see [[akka.contrib.throttle.TimerBasedThrottler]]
@@ -124,6 +131,22 @@ private[throttle] object TimerBasedThrottler {
   final case class Data(target: Option[ActorRef],
                         callsLeftInThisPeriod: Int,
                         queue: Q[Message])
+}
+
+/**
+ * Factory for timer based throttler actors.
+ */
+object TimerBasedThrottlerActor {
+
+  /**
+   * Creates a timer based throttle actor.
+   * @param rate Rate to limit requests at.
+   * @param queueSize Maximum number of outstanding requests to queue before immediately returning [[QueueFull]].
+   * @param system Actor system.
+   * @return Timer based throttler actor reference.
+   */
+  def apply(rate: Rate, queueSize: Option[Int], system: ActorSystem): ActorRef =
+    system.actorOf(Props(classOf[TimerBasedThrottler], rate, queueSize))
 }
 
 /**
