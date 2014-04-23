@@ -1,8 +1,11 @@
 /**
+ * FORKED FROM:
+ * https://raw.githubusercontent.com/akka/akka/master/akka-contrib/src/main/scala/akka/contrib/throttle/TimerBasedThrottler.scala
+ *
  * Copyright (C) 2009-2014 Typesafe Inc. <http://www.typesafe.com>
  */
 
-package akka.contrib.throttle
+package forks.akka.contrib.throttle
 
 import scala.concurrent.duration.{ Duration, FiniteDuration }
 import scala.util.control.NonFatal
