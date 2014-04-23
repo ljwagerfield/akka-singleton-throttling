@@ -84,6 +84,11 @@ object Throttler {
    */
   final case class SetRate(rate: Rate)
 
+  /**
+   * Returned when queue is at capacity.
+   */
+  final case class QueueFull()
+
   import language.implicitConversions
 
   /**
@@ -220,7 +225,7 @@ private[throttle] object TimerBasedThrottler {
  *
  * @see [[akka.contrib.throttle.Throttler]]
  */
-class TimerBasedThrottler(var rate: Rate) extends Actor with FSM[State, Data] {
+class TimerBasedThrottler(var rate: Rate, val queueSize: Option[Int] = None) extends Actor with FSM[State, Data] {
   startWith(Idle, Data(None, rate.numberOfCalls, Q()))
 
   // Idle: no messages, or target not set
@@ -273,6 +278,11 @@ class TimerBasedThrottler(var rate: Rate) extends Actor with FSM[State, Data] {
     // Period ends and we get more occasions to send messages
     case Event(Tick, d @ Data(_, _, _)) ⇒
       stay using deliverMessages(d.copy(callsLeftInThisPeriod = rate.numberOfCalls))
+
+    // Do not queue a message (when we cannot send messages in the current period anymore and queue limit reached)
+    case Event(msg, d @ Data(_, 0, queue)) if queueSize.exists(_ == queue.size) ⇒
+      context.sender() forward QueueFull()
+      stay()
 
     // Queue a message (when we cannot send messages in the current period anymore)
     case Event(msg, d @ Data(_, 0, queue)) ⇒
