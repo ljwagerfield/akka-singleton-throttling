@@ -1,7 +1,6 @@
 package example.throttling
 
-import akka.actor._
-import forks.akka.contrib.throttle.Throttler.QueueFull
+import akka.actor.{Props, ActorSystem, Stash, ActorLogging, Actor, ActorRef}
 
 /**
  * Performs in-process throttling.
@@ -9,10 +8,14 @@ import forks.akka.contrib.throttle.Throttler.QueueFull
  */
 class LocalThrottleActor(singletonThrottle: ActorRef) extends Actor with ActorLogging with Stash {
 
+  /**
+   * Initial behaviour.
+   */
   override def receive: Receive = {
     case message: ThrottleAction =>
-      val pendingActor = context.actorOf(Props(classOf[LocalQueuedActionActor], message))
-      singletonThrottle.tell(Enqueue(), pendingActor)
+      singletonThrottle.tell(
+        Enqueue(),
+        LocalQueuedActionActor(message, context))
   }
 }
 
@@ -28,17 +31,4 @@ object LocalThrottleActor {
    */
   def apply(singletonThrottle: ActorRef, system: ActorSystem): ActorRef =
     system.actorOf(Props(new LocalThrottleActor(singletonThrottle)), name = "local-throttle")
-}
-
-class LocalQueuedActionActor(message: ThrottleAction) extends Actor with ActorLogging {
-
-  override def receive: Actor.Receive = {
-    case Dequeue() =>
-      message.action()
-      context stop self
-
-    case QueueFull() =>
-      message.queueFull()
-      context stop self
-  }
 }

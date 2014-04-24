@@ -12,8 +12,15 @@ import scala.Some
  */
 class SingletonThrottleActor(timerBasedThrottle: ActorRef) extends Actor with ActorLogging {
 
-  timerBasedThrottle ! SetTarget(Some(self))
+  /**
+   * Called when an Actor is started.
+   */
+  override def preStart(): Unit =
+    timerBasedThrottle ! SetTarget(Some(self))
 
+  /**
+   * Initial behaviour.
+   */
   override def receive: Receive = {
     case Enqueue() =>
       timerBasedThrottle forward Dequeue()
